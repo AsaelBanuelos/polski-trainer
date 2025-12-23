@@ -18,59 +18,28 @@ type Flake = {
 };
 
 export function SnowOverlay({ enabled = true, intensity, wind = 0.25 }: Props) {
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     const rafRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!enabled) return;
 
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+        const canvasEl = canvasRef.current;
+        if (!canvasEl) return;
 
-        const ctx = canvas.getContext("2d");
+        const ctx = canvasEl.getContext("2d");
         if (!ctx) return;
 
         let w = 0;
         let h = 0;
 
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
         const flakes: Flake[] = [];
 
-        function resize() {
-            w = window.innerWidth;
-            h = window.innerHeight;
+        const rand = (min: number, max: number) =>
+            Math.random() * (max - min) + min;
 
-            canvas.width = Math.floor(w * dpr);
-            canvas.height = Math.floor(h * dpr);
-            canvas.style.width = `${w}px`;
-            canvas.style.height = `${h}px`;
-
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            // Create flakes if empty or if intensity changes
-            const targetCount =
-                typeof intensity === "number"
-                    ? intensity
-                    : Math.max(80, Math.min(220, Math.floor((w * h) / 12000)));
-
-            if (flakes.length === 0) {
-                for (let i = 0; i < targetCount; i++) {
-                    flakes.push(makeFlake(true));
-                }
-            } else {
-                // adjust count smoothly
-                while (flakes.length < targetCount)
-                    flakes.push(makeFlake(true));
-                while (flakes.length > targetCount) flakes.pop();
-            }
-        }
-
-        function rand(min: number, max: number) {
-            return Math.random() * (max - min) + min;
-        }
-
-        function makeFlake(randomY: boolean): Flake {
+        const makeFlake = (randomY: boolean): Flake => {
             const r = rand(1.2, 4.2);
             return {
                 x: rand(0, w),
@@ -82,13 +51,38 @@ export function SnowOverlay({ enabled = true, intensity, wind = 0.25 }: Props) {
                 wobbleSpeed: rand(0.008, 0.02),
                 alpha: rand(0.55, 0.95),
             };
-        }
+        };
 
-        function tick() {
-            // clear
+        const resize = () => {
+            w = window.innerWidth;
+            h = window.innerHeight;
+
+            // ✅ canvasEl y ctx ya están garantizados arriba
+            canvasEl.width = Math.floor(w * dpr);
+            canvasEl.height = Math.floor(h * dpr);
+            canvasEl.style.width = `${w}px`;
+            canvasEl.style.height = `${h}px`;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const targetCount =
+                typeof intensity === "number"
+                    ? intensity
+                    : Math.max(80, Math.min(220, Math.floor((w * h) / 12000)));
+
+            if (flakes.length === 0) {
+                for (let i = 0; i < targetCount; i++)
+                    flakes.push(makeFlake(true));
+            } else {
+                while (flakes.length < targetCount)
+                    flakes.push(makeFlake(true));
+                while (flakes.length > targetCount) flakes.pop();
+            }
+        };
+
+        const tick = () => {
             ctx.clearRect(0, 0, w, h);
 
-            // draw flakes
             for (let i = 0; i < flakes.length; i++) {
                 const f = flakes[i];
 
@@ -98,7 +92,6 @@ export function SnowOverlay({ enabled = true, intensity, wind = 0.25 }: Props) {
                 f.x += f.vx + wobbleX * 0.03;
                 f.y += f.vy;
 
-                // wrap
                 if (f.y - f.r > h) {
                     flakes[i] = makeFlake(false);
                     continue;
@@ -114,14 +107,12 @@ export function SnowOverlay({ enabled = true, intensity, wind = 0.25 }: Props) {
             }
 
             ctx.globalAlpha = 1;
-
             rafRef.current = window.requestAnimationFrame(tick);
-        }
+        };
 
         resize();
         window.addEventListener("resize", resize);
 
-        // Optional: pause when tab not visible
         const onVis = () => {
             if (document.hidden) {
                 if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -151,8 +142,8 @@ export function SnowOverlay({ enabled = true, intensity, wind = 0.25 }: Props) {
             style={{
                 position: "fixed",
                 inset: 0,
-                zIndex: 9999, // on top of everything
-                pointerEvents: "none", // doesn't block clicks/typing
+                zIndex: 9999,
+                pointerEvents: "none",
             }}
         />
     );
