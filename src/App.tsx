@@ -90,7 +90,7 @@ export default function App() {
 
             <div className="exercises-counter">
                 <div className="exercises-counter__item">
-                    Tiempo: <b>{formattedTime}</b>
+                    TIMER: <b>{formattedTime}</b>
                 </div>
                 <div className="exercises-counter__item">
                     <span
